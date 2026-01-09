@@ -116,12 +116,15 @@ function prevFrame() {
 }
 
 function throttle(fn, delay = 300) {
-  if (isTransitioning) return;
-  isTransitioning = true;
-  fn();
-  setTimeout(() => {
-    isTransitioning = false;
-  }, delay);
+  // 不在这里检查isTransitioning，让手势可以触发
+  let timeoutId = null;
+  return function(...args) {
+    if (timeoutId) return;
+    timeoutId = setTimeout(() => {
+      fn.apply(this, args);
+      timeoutId = null;
+    }, delay);
+  };
 }
 
 // 超敏感的滚轮交互 - 平滑过渡
@@ -181,6 +184,9 @@ document.addEventListener('touchstart', (e) => {
 }, { passive: true });
 
 // 触摸移动 - 手机端优化：更敏感的缩放手势检测
+let lastScale = 1;
+let gestureHandled = false;
+
 document.addEventListener('touchmove', (e) => {
   if (e.touches.length === 2 && touchStartDistance > 0) {
     e.preventDefault();
@@ -190,19 +196,24 @@ document.addEventListener('touchmove', (e) => {
     
     // 手机端：降低阈值，更敏感的手势检测
     const isMobile = window.innerWidth <= 768;
-    const scaleThreshold = isMobile ? 0.1 : 0.15; // 手机端更敏感
-    const scaleTrigger = isMobile ? 1.1 : 1.15; // 手机端更容易触发
+    const scaleThreshold = isMobile ? 0.08 : 0.12; // 手机端更敏感
+    const scaleTrigger = isMobile ? 1.08 : 1.12; // 手机端更容易触发
     
-    if (timeElapsed < 1500 && Math.abs(scale - 1) > scaleThreshold) {
-      if (scale > scaleTrigger) {
+    // 只在手势完成时触发一次，避免重复触发
+    if (!gestureHandled && timeElapsed < 2000 && Math.abs(scale - 1) > scaleThreshold) {
+      if (scale > scaleTrigger && scale > lastScale) {
         // 放大 - 前进到下一帧
-        throttle(nextFrame);
-      } else if (scale < (2 - scaleTrigger)) {
+        gestureHandled = true;
+        nextFrame();
+        touchStartDistance = 0;
+      } else if (scale < (2 - scaleTrigger) && scale < lastScale) {
         // 缩小 - 后退到上一帧
-        throttle(prevFrame);
+        gestureHandled = true;
+        prevFrame();
+        touchStartDistance = 0;
       }
-      touchStartDistance = 0; // 重置
     }
+    lastScale = scale;
   }
 }, { passive: false });
 
@@ -210,6 +221,8 @@ document.addEventListener('touchmove', (e) => {
 document.addEventListener('touchend', () => {
   touchStartDistance = 0;
   touchStartTime = 0;
+  lastScale = 1;
+  gestureHandled = false;
 }, { passive: true });
 
 // 添加设备运动检测 (适用于移动设备)

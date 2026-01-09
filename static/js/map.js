@@ -431,6 +431,10 @@ function handleResize() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(function() {
             console.log('Screen size changed, re-rendering pins...');
+            // 关键：在resize时强制Leaflet地图重新计算尺寸
+            if (map) {
+                map.invalidateSize();
+            }
             refreshMapMarkers();
             lastScreenSize = currentScreenSize;
         }, 300); // Slightly longer debounce for better performance
@@ -444,6 +448,10 @@ window.addEventListener('resize', handleResize);
 window.addEventListener('orientationchange', function() {
     setTimeout(function() {
         console.log('Orientation changed, re-rendering pins...');
+        // 关键：在方向改变时强制Leaflet地图重新计算尺寸
+        if (map) {
+            map.invalidateSize();
+        }
         refreshMapMarkers();
         lastScreenSize = { width: window.innerWidth, height: window.innerHeight };
     }, 500); // Wait for orientation change to complete
