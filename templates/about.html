@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About and Manual - MapFolio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body class="page-body">
+    <!-- 固定在背后的多重渐变背景 -->
+    <div class="map-background">
+      <div class="background-overlay"></div>
+    </div>
+  
+    <!-- 居中定位的外壳 -->
+    <div class="about-shell">
+      <!-- 只滚这一块：加上 glass-scroll 做磨砂玻璃 -->
+      <div class="list-container glass-scroll">
+        <h1 class="list-h1">About MapFolio</h1>
+  
+        <div class="about-content">
+          <h2>What is MapFolio?</h2>
+          <p>MapFolio is an interactive mapping platform that allows users to create and share location-based projects. Each project is represented by a pin on the map, containing images, descriptions, and location data.</p>
+  
+          <h2>Manual</h2>
+          <div class="manual-section">
+            <h3>1) Add a New Project (Pin)</h3>
+            <ul>
+              <li>Right-click on the map where you want to place your project and choose <em>Add Pin</em>.</li>
+              <li>Fill in the form: <em>Project Type</em>, <em>Title</em>, <em>Year</em>, <em>Full Credit</em>, <em>Description</em>.</li>
+              <li>Set a 4-digit <em>PIN</em> (needed for future edits/deletion).</li>
+              <li>Upload a <em>Thumbnail</em> (≥ 800×600). Optionally upload a gallery.</li>
+              <li>Click <em>Save and Continue</em> to create your project.</li>
+            </ul>
+  
+            <h3>2) View Projects</h3>
+            <ul>
+              <li>Click any pin to open its popup, then choose <em>View</em> for details.</li>
+              <li>Use <em>List-view Archive</em> to browse all projects with thumbnails.</li>
+            </ul>
+  
+            <h3>3) Edit / Delete with PIN</h3>
+            <ul>
+              <li>Right-click near an existing pin and choose <em>Edit Existing Pin</em>, enter your 4-digit PIN to unlock editing.</li>
+              <li>To delete a project, choose <em>Delete</em> in the same PIN flow (you must enter the correct PIN).</li>
+            </ul>
+  
+            <h3>4) Navigation Controls</h3>
+            <ul>
+              <li><em>Navigate</em> toggles whether the map accepts drag/zoom.</li>
+              <li><em>Add Location</em> opens the upload form without clicking the map.</li>
+            </ul>
+  
+            <h3>5) Image & Storage</h3>
+            <ul>
+              <li>Large images are optimized on upload; gallery images preserve order.</li>
+              <li>All data is saved locally on this server (SQLite + local images).</li>
+            </ul>
+  
+            <h3>6) Privacy & Security</h3>
+            <ul>
+              <li>Your 4-digit PIN protects edits/deletion of your own project.</li>
+              <li>No personal data is collected beyond what you enter in the form.</li>
+            </ul>
+          </div>
+        </div>
+  
+        <a href="/map" class="back-link">← Back to Map</a>
+      </div>
+    </div>
+  </body>
+  <script src="{{ url_for('static', filename='js/about.js') }}"></script>
+</html>
+
+

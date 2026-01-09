@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <title>List-view Archive</title>
+</head>
+
+<body class="page-body">
+    <!-- 背景 -->
+    <div class="map-background">
+        <div class="background-overlay"></div>
+    </div>
+
+    <!-- 顶部导航 -->
+    <nav class="list-navigation">
+        <a href="/about" class="nav-button nav-button--top-left">
+            <div class="nav-button__foot"></div>
+            <span class="nav-button__text">About and Manual</span>
+        </a>
+        <a href="/map" class="nav-button nav-button--top-right">
+            <div class="nav-button__foot"></div>
+            <span class="nav-button__text">Back to Map Page</span>
+        </a>
+    </nav>
+
+    <!-- 左右翻页箭头 -->
+    <button class="arrow-button arrow-button--left" onclick="goLeft()">
+        <div class="arrow-shape arrow-shape--left"></div>
+    </button>
+    <button class="arrow-button arrow-button--right" onclick="goRight()">
+        <div class="arrow-shape arrow-shape--right"></div>
+    </button>
+
+    <!-- 主体项目网格容器 -->
+    <div class="list-content-container">
+        <div class="project-grid">
+            {% for pin in pins %}
+                <div class="project-box">
+                    <div class="project-container">
+                        <a href="/detail/{{ pin[0] }}">
+                            <img src="{{ url_for('static', filename=pin[6].replace('static/', '').replace('\\', '/')) }}" 
+                                 alt="{{ pin[1] }}" 
+                                 class="project-image">
+                        </a>
+                    </div>
+                    <div class="project-title">
+                        <a href="/detail/{{ pin[0] }}" class="project-link">{{ pin[1] }}</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- 分类图例 -->
+    <div class="category-legend">
+        <div class="legend-item"><div class="legend-circle" style="background-color:#FFB8C3;"></div><span>Architecture</span></div>
+        <div class="legend-item"><div class="legend-circle" style="background-color:#88D7FF;"></div><span>Urban Planning</span></div>
+        <div class="legend-item"><div class="legend-circle" style="background-color:#FFF27E;"></div><span>Urban Design</span></div>
+        <div class="legend-item"><div class="legend-circle" style="background-color:#84FF9F;"></div><span>Landscape Architecture</span></div>
+        <div class="legend-item"><div class="legend-circle" style="background-color:#E0E0E0;"></div><span>Other</span></div>
+    </div>
+
+    <script>
+        function goLeft(){ console.log('Going left'); }
+        function goRight(){ console.log('Going right'); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Modify</title>
+</head>
+<body>
+    <h1>Test Modify Form</h1>
+    <form action="http://127.0.0.1:5000/modify/3" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="pin_code" value="0614">
+        <label>Title: <input type="text" name="title" value="Test Title" required></label><br>
+        <label>Author: <input type="text" name="author" value="Test Author" required></label><br>
+        <label>Year: <input type="text" name="year" value="2024"></label><br>
+        <label>Description: <textarea name="description" required>Test Description</textarea></label><br>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+</html>
+

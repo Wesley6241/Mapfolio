@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Edit – {{ pin[1] }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <style>
+    .edit-wrap{max-width:980px;margin:40px auto;padding:24px;border-radius:16px;
+      background:rgba(255,255,255,.55);backdrop-filter:blur(10px);box-shadow:0 10px 24px rgba(0,0,0,.08)}
+    .edit-row{display:flex;gap:14px;margin-bottom:14px;align-items:flex-start}
+    .edit-row label{min-width:140px;padding-top:10px;color:#333;font-weight:600}
+    .edit-row input[type="text"], .edit-row textarea{flex:1;padding:10px 12px;border:1px solid #ddd;border-radius:10px}
+    .thumb{max-width:240px;border-radius:12px;border:1px solid #eee}
+    .actions{display:flex;gap:12px;justify-content:flex-end;margin-top:18px}
+    .btn{border:1px solid #111;background:#111;color:#fff;border-radius:10px;padding:9px 14px;cursor:pointer}
+    .btn--ghost{background:#fff;color:#111;border-color:#ccc}
+    .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:14px}
+    .gitem{border:1px solid #eee;border-radius:12px;padding:10px;background:#fff}
+    .gitem img{width:100%;border-radius:8px;border:1px solid #eee}
+    .gitem .field{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+    .muted{font-size:12px;opacity:.7}
+    .hr{height:1px;background:rgba(0,0,0,.06);margin:16px 0}
+  </style>
+</head>
+<body class="page-body">
+  <!-- ✅ 和 map.html 同款背景 -->
+  <div class="map-background">
+    <div class="background-overlay"></div>
+  </div>
+
+  <!-- 垂直滚动滑杆控制毛玻璃容器 -->
+  <div class="glass-scroll-wrap">
+    <div id="glassBox" class="project-glass">
+      <div class="edit-wrap">
+        <h2>Edit Project</h2>
+
+        <form id="editForm" method="post" action="{{ url_for('modify_pin', id=pin[0]) }}" enctype="multipart/form-data">
+          <input type="hidden" name="pin_code" value="{{ pin_code }}">
+
+          <!-- 基本信息 -->
+          <div class="edit-row">
+            <label>Title</label>
+            <input type="text" name="title" value="{{ pin[1] }}" required>
+          </div>
+          <div class="edit-row">
+            <label>Author</label>
+            <input type="text" name="author" value="{{ pin[3] }}" required>
+          </div>
+          <div class="edit-row">
+            <label>Year</label>
+            <input type="text" name="year" value="{{ pin[11] or '' }}" placeholder="Project year (optional)">
+          </div>
+          <div class="edit-row">
+            <label>Description</label>
+            <textarea name="description" rows="5" required>{{ pin[2] }}</textarea>
+          </div>
+
+          <div class="hr"></div>
+
+          <!-- 缩略图（主图） -->
+          <div class="edit-row">
+            <label>Thumbnail</label>
+            <div>
+              <img class="thumb" src="{{ url_for('static', filename=pin[6].replace('static/', '').replace('\\','/')) }}" alt="thumbnail">
+              <div class="field">
+                <input type="file" name="main_image" accept="image/*">
+                <input type="text" name="thumbnail_description" value="{{ pin[13] or '' }}" placeholder="Thumbnail description (optional)">
+                <div class="muted">Selecting a file allows you to replace the Thumbnail; leaving it blank means no change will be made.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="hr"></div>
+
+          <!-- 现有画廊（支持替换、改描述、删除） -->
+          <div class="edit-row" style="align-items:flex-start">
+            <label>Gallery (existing)</label>
+            <div class="gallery-grid">
+              {% for img in extra_images %}
+              <!-- extra_images: (img_id, path, desc) -->
+              <div class="gitem">
+                <img src="{{ url_for('static', filename=img[1].replace('static/', '')) }}" alt="detail {{ loop.index }}">
+                <div class="field">
+                  <input type="hidden" name="existing_ids[]" value="{{ img[0] }}">
+                  <input type="text" name="existing_desc[{{ img[0] }}]" value="{{ img[2] or '' }}" placeholder="Description">
+                  <input type="file" name="replace_image[{{ img[0] }}]" accept="image/*">
+                  <label class="muted"><input type="checkbox" name="delete_image_ids[]" value="{{ img[0] }}"> Delete this image</label>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- 新增画廊图片（可多选，并为每张写描述） -->
+          <div class="edit-row" style="align-items:flex-start">
+            <label>Add New Images</label>
+            <div>
+              <input type="file" name="details" accept="image/*" multiple id="newDetailsInput">
+              <div id="newDetailsList" class="gallery-grid" style="margin-top:10px;"></div>
+              <div class="muted">After selecting multiple images, you can provide descriptions for each one (and they will be saved along with the submission).</div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <a class="btn btn--ghost" href="{{ url_for('detail', id=pin[0]) }}">Cancel</a>
+            <button type="submit" class="btn">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 垂直滑杆 -->
+    <input id="glassVSlider" type="range" min="0" max="100" value="0" class="glass-vslider">
+  </div>
+
+  <script>
+    // 选择新增图片后，为每张生成一个描述输入框，并用 name="image_descriptions[]" 收集
+    const input = document.getElementById('newDetailsInput');
+    const list  = document.getElementById('newDetailsList');
+    input?.addEventListener('change', async (e) => {
+      list.innerHTML = '';
+      const files = Array.from(e.target.files||[]);
+      for (const f of files) {
+        const url = URL.createObjectURL(f);
+        const cell = document.createElement('div');
+        cell.className = 'gitem';
+        cell.innerHTML = `
+          <img src="${url}" alt="">
+          <div class="field">
+            <input type="text" name="image_descriptions[]" placeholder="Description for ${f.name.replace(/\.\w+$/, '')}">
+          </div>`;
+        list.appendChild(cell);
+      }
+    });
+
+    // ====== 垂直滚动滑杆控制毛玻璃容器 ======
+    (function(){
+      const box    = document.getElementById('glassBox');     // 滚动容器
+      const slider = document.getElementById('glassVSlider'); // 垂直滑杆
+      if (!box || !slider) return;
+
+      let isDragging = false;   // 避免"互相触发打架"
+      let rafToken   = null;
+
+      function setDisabledIfNoScroll(){
+        const max = box.scrollHeight - box.clientHeight;
+        const disable = max <= 1;
+        slider.classList.toggle('is-disabled', disable);
+        slider.value = 0;
+      }
+
+      // 容器滚动 → 同步滑杆
+      function syncFromScroll(){
+        if (isDragging) return;               // 拖动时不反向更新
+        const max = box.scrollHeight - box.clientHeight;
+        const ratio = max > 0 ? (box.scrollTop / max) : 0;
+        slider.value = Math.round(ratio * 100);
+      }
+
+      // 滑杆拖动 → 控制容器滚动
+      function syncFromSlider(){
+        const max = box.scrollHeight - box.clientHeight;
+        const target = (slider.value / 100) * max;
+        box.scrollTop = target;
+      }
+
+      // 用 rAF 节流，平滑且省资源
+      box.addEventListener('scroll', () => {
+        if (rafToken) cancelAnimationFrame(rafToken);
+        rafToken = requestAnimationFrame(syncFromScroll);
+      });
+
+      slider.addEventListener('input', () => {
+        isDragging = true;
+        syncFromSlider();
+      });
+      slider.addEventListener('change', () => {
+        isDragging = false;
+        syncFromSlider();
+      });
+
+      // 初始 & 尺寸变化时更新可滚状态
+      const ro = new ResizeObserver(() => {
+        setDisabledIfNoScroll();
+        syncFromScroll();
+      });
+      ro.observe(box);
+      setDisabledIfNoScroll();
+      syncFromScroll();
+    })();
+  </script>
+</body>
+</html>

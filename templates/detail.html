@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>{{ pin[1] }} - Project Details</title>
+</head>
+
+<body class="page-body">
+    <!-- 背景 -->
+    <div class="map-background">
+        <div class="background-overlay"></div>
+    </div>
+    
+    <div class="project-page">
+
+        <!-- Navigation -->
+        <nav class="project-nav">
+            <div class="nav-item">
+                <div class="nav-foot"></div>
+                <a href="javascript:void(0)" class="nav-link" onclick="startModifyFlow('{{ pin[0] }}')">Modify</a>
+            </div>
+            <div class="nav-item">
+                <div class="nav-foot"></div>
+                <a href="{{ url_for('about') }}" class="nav-link">About and Manual</a>
+            </div>
+            <div class="nav-item">
+                <div class="nav-foot"></div>
+                <a href="{{ url_for('map_page') }}" class="nav-link">Map-view Archive</a>
+            </div>
+            <div class="nav-item">
+                <div class="nav-foot"></div>
+                <a href="{{ url_for('project_list') }}" class="nav-link">List-view Archive</a>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="project-content">
+            <!-- Thumbnail and Description Row -->
+            <div class="detail-top-row">
+                <!-- Thumbnail -->
+                <div class="detail-thumbnail-container">
+                    <div class="detail-thumbnail">
+                        <img src="{{ url_for('static', filename=pin[6].replace('static/', '').replace('\\', '/')) }}" alt="{{ pin[1] }}" class="thumbnail-img">
+                    </div>
+                    {% if thumbnail_description %}
+                        <p class="thumbnail-description">{{ thumbnail_description }}</p>
+                    {% endif %}
+                </div>
+                
+                <!-- Text Description -->
+                <div class="detail-text-container">
+                    <div class="project-type">{{ pin[10] }}</div>
+                    <div class="project-title_detail">{{ pin[1] }}</div>
+                    <div class="project-year">{{ pin[11] }}</div>
+                    <div class="project-credit">{{ pin[3] }}</div>
+                    <div class="project-description">
+                        <p>{{ pin[2] }}</p>
+                    </div>
+                    <div class="project-last-edited">{{ pin[7] }}</div>
+                </div>
+            </div>
+            
+            <!-- Image Gallery -->
+            <div class="detail-gallery-container">
+                <!-- Like Button - Floating -->
+                <button class="like-btn" onclick="likePin('{{ pin[0] }}')">
+                    <img src="{{ url_for('static', filename='image/heart.svg') }}" alt="Like" class="like-icon">
+                    <span class="like-count" id="like-count">{{ pin[8] }}</span>
+                </button>
+                
+                <!-- ← 左右导航箭头（溢出时显示） -->
+                <button class="gallery-nav gallery-nav--left" aria-label="Scroll left">‹</button>
+                <button class="gallery-nav gallery-nav--right" aria-label="Scroll right">›</button>
+                
+                <div class="detail-gallery">
+                    {% if extra_images %}
+                        {% for img_data in extra_images %}
+                            <div class="gallery-image-item">
+                                <img src="{{ url_for('static', filename=img_data[0].replace('static/', '')) }}" alt="Project image {{ loop.index }}" class="gallery-img" data-img-src="{{ url_for('static', filename=img_data[0].replace('static/', '')) }}" data-img-desc="{{ img_data[1] or '' }}">
+                                <p class="gallery-image-description">{{ img_data[1] or '' }}</p>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <!-- Placeholder images if no extra images -->
+                        {% for i in range(4) %}
+                        <div class="gallery-image-item">
+                            <div class="gallery-placeholder-img"></div>
+                            <p class="gallery-image-description"></p>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox(event)">
+        <div class="lightbox-content" onclick="event.stopPropagation()">
+            <span class="lightbox-close" onclick="closeLightbox(event)">&times;</span>
+            <img id="lightbox-img" src="" alt="Gallery image">
+            <p id="lightbox-description" class="lightbox-description"></p>
+        </div>
+    </div>
+
+    <!-- PIN Dialog -->
+    <div id="pinDialog" class="pin-dialog" style="display: none;">
+        <div class="pin-dialog__card" onclick="event.stopPropagation()">
+            <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600;">Enter PIN to Modify</h3>
+            <input type="text" id="pinInput" class="pin-dialog__field" placeholder="Enter 4-digit PIN" maxlength="4" style="margin-bottom: 12px; margin-top: 12px;" autocomplete="off">
+            <div class="pin-dialog__actions">
+                <button class="pin-dialog__btn" onclick="closePinDialog()">Cancel</button>
+                <button class="pin-dialog__btn pin-dialog__btn--ok" onclick="confirmPinAndGo()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JS scripts -->
+    <script src="{{ url_for('static', filename='js/detail.js') }}"></script>
+    <script>
+        // PIN verification flow
+        const __modifyTargetUrl = "{{ url_for('modify_pin', id=pin[0]) }}";
+        const __pinVerifyUrl = "/verify-pin/{{ pin[0] }}";
+        
+        window.__detailCurrentPinId = "{{ pin[0] }}";
+
+        function startModifyFlow(pinId) {
+            const dialog = document.getElementById('pinDialog');
+            dialog.style.display = 'flex';
+            dialog.classList.add('centered');
+            document.getElementById('pinInput').focus();
+        }
+
+        function closePinDialog() {
+            const dialog = document.getElementById('pinDialog');
+            dialog.style.display = 'none';
+            dialog.classList.remove('centered');
+            document.getElementById('pinInput').value = '';
+        }
+
+        async function confirmPinAndGo() {
+            const pinInput = document.getElementById('pinInput');
+            const pin = pinInput.value.trim();
+            
+            if (!pin || pin.length !== 4) {
+                alert('Please enter a 4-digit PIN.');
+                return;
+            }
+
+            try {
+                const res = await fetch(__pinVerifyUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ pin_code: pin })
+                });
+
+                const data = await res.json();
+                if (data && data.success) {
+                    // PIN is valid, redirect to modify page with PIN as query parameter
+                    const separator = __modifyTargetUrl.includes('?') ? '&' : '?';
+                    window.location.href = __modifyTargetUrl + separator + 'pin=' + encodeURIComponent(pin);
+                } else {
+                    alert(data && data.message ? data.message : 'Invalid PIN.');
+                    pinInput.value = '';
+                    pinInput.focus();
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Network error. Please try again.');
+            }
+        }
+
+        // Allow Enter key to confirm PIN
+        document.addEventListener('DOMContentLoaded', function() {
+            const pinInput = document.getElementById('pinInput');
+            if (pinInput) {
+                pinInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        confirmPinAndGo();
+                    }
+                });
+            }
+        });
+
+        // Click outside to close dialog
+        document.getElementById('pinDialog').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePinDialog();
+            }
+        });
+    </script>
+</body>
+
+</html>

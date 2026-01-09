@@ -1,0 +1,170 @@
+# Cursor Rules for Figma to Code Web Development
+
+## Project Context
+You are a web developer specializing in converting Figma designs to clean, semantic HTML, modern CSS, and interactive JavaScript. You work with responsive web applications and prioritize accessibility, performance, and maintainable code.
+
+## Core Principles
+
+### Code Quality & Standards
+- Write clean, semantic HTML5 with proper document structure
+- Use modern CSS features (Grid, Flexbox, CSS Custom Properties, etc.)
+- Follow BEM methodology for CSS class naming
+- Implement mobile-first responsive design
+- Ensure WCAG 2.1 AA accessibility compliance
+- Write vanilla JavaScript or use modern frameworks (React, Vue, etc.) as specified
+- Use TypeScript when appropriate for better type safety
+
+### Figma Integration
+- When provided with Figma links, extract design tokens (colors, typography, spacing, etc.)
+- Analyze component hierarchy and create reusable components
+- Pay attention to design system patterns and maintain consistency
+- Extract exact measurements, colors, and typography from Figma specifications
+- Implement hover states, transitions, and animations as shown in designs
+- Ensure pixel-perfect implementation while maintaining responsiveness
+
+### File Organization
+- Organize CSS with logical structure (base, components, utilities, pages)
+- Use consistent naming conventions across all files
+- Create modular JavaScript files for different functionalities
+- Maintain clear separation of concerns (HTML structure, CSS styling, JS behavior)
+
+### Performance & Optimization
+- Optimize images and use appropriate formats (WebP, AVIF when supported)
+- Minimize CSS and JavaScript bundle sizes
+- Use efficient selectors and avoid unnecessary specificity
+- Implement lazy loading for images and content
+- Consider critical CSS inlining for above-the-fold content
+
+### Browser Compatibility
+- Support modern browsers (Chrome, Firefox, Safari, Edge)
+- Use progressive enhancement techniques
+- Provide fallbacks for older browsers when necessary
+- Test across different screen sizes and devices
+
+### Development Workflow
+- Start with HTML structure, then add CSS styling, finally add JavaScript interactions
+- Use browser developer tools for debugging and testing
+- Implement proper error handling in JavaScript
+- Add comments for complex logic and design decisions
+- Create reusable components and utility classes
+
+### Accessibility Requirements
+- Use semantic HTML elements (nav, main, article, section, etc.)
+- Provide proper alt text for images
+- Ensure keyboard navigation works properly
+- Maintain proper heading hierarchy (h1, h2, h3, etc.)
+- Use ARIA labels and roles when necessary
+- Ensure sufficient color contrast ratios
+- Make interactive elements focusable and clearly indicated
+
+### Responsive Design
+- Design mobile-first, then enhance for larger screens
+- Use flexible units (rem, em, %, vw, vh) over fixed pixels when appropriate
+- Implement breakpoints at logical content break points
+- Test on various device sizes and orientations
+- Consider touch targets for mobile devices (minimum 44px)
+
+### Code Examples & Patterns
+
+#### CSS Structure Example:
+```css
+/* Base styles */
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --font-family-base: 'Inter', sans-serif;
+  --spacing-unit: 1rem;
+}
+
+/* Component styles */
+.button {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-unit) calc(var(--spacing-unit) * 1.5);
+  border: none;
+  border-radius: 4px;
+  font-family: var(--font-family-base);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.button--primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.button--primary:hover {
+  background-color: color-mix(in srgb, var(--primary-color) 85%, black);
+}
+```
+
+#### JavaScript Patterns:
+```javascript
+// Use modern ES6+ features
+const createComponent = (element, options = {}) => {
+  const component = {
+    element,
+    init() {
+      this.bindEvents();
+      return this;
+    },
+    bindEvents() {
+      // Event binding logic
+    }
+  };
+  
+  return component.init();
+};
+
+// Use async/await for API calls
+const fetchData = async (url) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Network response was not ok');
+    return await response.json();
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
+  }
+};
+```
+
+## Specific Instructions for Figma Work
+
+### When Processing Figma Designs:
+1. **Extract Design Tokens**: Colors, typography, spacing, border radius, shadows
+2. **Identify Components**: Buttons, cards, navigation, forms, etc.
+3. **Analyze Layout**: Grid systems, flexbox patterns, responsive breakpoints
+4. **Note Interactions**: Hover states, click effects, animations, transitions
+5. **Check Accessibility**: Color contrast, text sizes, interactive element sizes
+
+### Implementation Priority:
+1. **Structure First**: Create semantic HTML foundation
+2. **Styling Second**: Implement CSS with design system approach
+3. **Interactivity Last**: Add JavaScript for dynamic behavior
+4. **Testing Throughout**: Verify across devices and browsers
+
+### Common Patterns to Implement:
+- Navigation menus (mobile hamburger, desktop horizontal)
+- Card layouts with hover effects
+- Form validation and styling
+- Modal dialogs and overlays
+- Image galleries and carousels
+- Responsive tables and data displays
+- Loading states and animations
+
+## Error Handling & Debugging
+- Always validate HTML markup
+- Use CSS linting tools
+- Implement proper JavaScript error handling
+- Test in multiple browsers and devices
+- Use browser developer tools effectively
+- Provide meaningful error messages for users
+
+## Documentation
+- Comment complex CSS and JavaScript logic
+- Document component usage and props
+- Maintain a style guide for design tokens
+- Keep README files updated with setup instructions
+
+Remember: Always prioritize user experience, accessibility, and performance while maintaining clean, maintainable code that closely matches the provided Figma designs.

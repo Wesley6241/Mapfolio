@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Feedbacks - MapFolio</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+</head>
+
+<body class="page-body">
+  <!-- 背景：与 map / about 相同的多重渐变 -->
+  <div class="map-background">
+    <div class="background-overlay"></div>
+  </div>
+
+  <!-- 居中外壳 -->
+  <div class="about-shell">
+    <!-- 中央玻璃磨砂卡片（只滚内部） -->
+    <div class="list-container glass-scroll">
+      <h1 class="list-h1">Feedbacks</h1>
+
+      <!-- 顶部简介 -->
+      <div class="about-content" style="margin-bottom:16px;">
+        <p>We’d love to hear your thoughts. Share feedback to help us improve MapFolio.</p>
+      </div>
+
+      <!-- 反馈表单（与后端 /feedback 字段匹配） -->
+      <form id="feedbackForm" method="POST" action="/feedback" novalidate style="margin-bottom:20px;">
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div>
+            <label class="form-label" for="name">Name <span style="color:#e00">*</span></label>
+            <input class="form-input" style="width:100%; background:#fff; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.08); padding:10px;" 
+                   type="text" id="name" name="name" required />
+          </div>
+          <div>
+            <label class="form-label" for="email">Email</label>
+            <input class="form-input" style="width:100%; background:#fff; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.08); padding:10px;" 
+                   type="email" id="email" name="email" placeholder="name@example.com" />
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label class="form-label" for="message">Message <span style="color:#e00">*</span></label>
+          <textarea class="form-textarea" id="message" name="message" rows="5" required
+                    style="width:100%; background:#fff; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.08); padding:10px;"></textarea>
+          <div id="charCount" style="text-align:right; font-size:12px; opacity:.8; margin-top:6px;">0 / 1000</div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:end;">
+          <div>
+            <label class="form-label" for="rating">Rating</label>
+            <select class="form-input" id="rating" name="rating"
+                    style="width:100%; background:#fff; border-radius:6px; box-shadow:0 2px 6px rgba(0,0,0,0.08); padding:10px;">
+              <option value="5" selected>5 - Excellent</option>
+              <option value="4">4 - Good</option>
+              <option value="3">3 - Fair</option>
+              <option value="2">2 - Poor</option>
+              <option value="1">1 - Bad</option>
+            </select>
+          </div>
+
+          <button type="submit" class="submit-button" style="height:40px;">Submit</button>
+        </div>
+
+        <!-- Flask flash 消息占位（若启用 Bootstrap，可显示更好看） -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div style="margin-top:14px;">
+              {% for category, message in messages %}
+                <div style="padding:10px 12px; border-radius:6px; margin-bottom:8px; background:rgba(255,255,255,0.7); border:1px solid rgba(0,0,0,0.06);">
+                  {{ message }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+      </form>
+
+      <!-- 分割线 -->
+      <hr style="border:none; height:1px; background:linear-gradient(90deg, transparent, rgba(0,0,0,.15), transparent); margin: 8px 0 16px;" />
+
+      <!-- 反馈统计与最近留言 -->
+      <div class="about-content">
+        <h2 style="margin-bottom:10px;">Recent Feedback</h2>
+        <div id="feedbackStats" style="font-size:14px; margin-bottom:10px; opacity:.9;"></div>
+        <div id="feedbackList" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+
+      <a href="/map" class="back-link" style="margin-top:18px;">← Back to Map</a>
+    </div>
+  </div>
+
+  <!-- 交互脚本：重用 about.js（滚动阴影等），再加载 feedback.js -->
+  <script src="{{ url_for('static', filename='js/about.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/feedback.js') }}"></script>
+</body>
+</html>
