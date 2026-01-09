@@ -978,9 +978,9 @@ def bad_request(error):
     return jsonify({"error": "Bad request"}), 400
 
 # Health check endpoint
-@app.route('/health')
-def health_check():
-    return jsonify({"status": "healthy", "message": "MapFolio API is running"})
+@app.get("/health")
+def health():
+    return {"ok": True}
 
 # Start the Flask development server
 if __name__ == '__main__':
