@@ -242,6 +242,48 @@ if (window.DeviceMotionEvent) {
 // 初始化
 setActiveFrame(0);
 
+// 创建动态粒子效果
+function createParticles(container, count = 30) {
+  if (!container) return;
+  
+  // 清空现有粒子（如果有）
+  container.innerHTML = '';
+  
+  for (let i = 0; i < count; i++) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    
+    // 随机大小 (2-8px)
+    const size = Math.random() * 6 + 2;
+    // 随机位置
+    const x = Math.random() * 100;
+    const y = Math.random() * 100;
+    // 随机透明度 (0.3-0.9)
+    const opacity = Math.random() * 0.6 + 0.3;
+    // 随机动画延迟
+    const delay = Math.random() * 5;
+    // 随机动画持续时间
+    const duration = Math.random() * 10 + 15;
+    
+    particle.style.cssText = `
+      position: absolute;
+      width: ${size}px;
+      height: ${size}px;
+      left: ${x}%;
+      top: ${y}%;
+      background: rgba(255, 255, 255, ${opacity});
+      border-radius: 50%;
+      pointer-events: none;
+      animation: particleMove ${duration}s ease-in-out infinite;
+      animation-delay: ${delay}s;
+      filter: blur(0.5px);
+      box-shadow: 0 0 ${size * 2}px rgba(255, 255, 255, ${opacity * 0.8});
+    `;
+    
+    container.appendChild(particle);
+  }
+}
+
 // 确保目标元素在Frame 1中可见
 document.addEventListener('DOMContentLoaded', () => {
   const targetElement = document.querySelector('.target-element');
@@ -249,6 +291,12 @@ document.addEventListener('DOMContentLoaded', () => {
     targetElement.style.transform = 'translate(-50%, -50%) scale(1)';
     targetElement.style.opacity = '1';
   }
+  
+  // 为所有粒子容器创建动态粒子
+  const particleContainers = document.querySelectorAll('.particles-container');
+  particleContainers.forEach(container => {
+    createParticles(container, 40);
+  });
   
   // 调试信息
   console.log('Landing page loaded');

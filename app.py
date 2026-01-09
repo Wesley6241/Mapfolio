@@ -362,180 +362,261 @@ def upload():
     def validate_pin_code(pin_code):
         return re.match(r'^\d{4}$', pin_code or '') is not None
 
-    # 1) 表单校验 ---------------------------------------------------------------
-    required = ['title', 'description', 'author', 'lat', 'lng', 'pin_code']
-    for f in required:
-        if not request.form.get(f, '').strip():
-            return jsonify({'error': f'{f} is required'}), 400
-
-    if not validate_pin_code(request.form.get('pin_code')):
-        return jsonify({'error': 'PIN code must be exactly 4 digits'}), 400
-
-    try:
-        lat = float(request.form['lat'])
-        lng = float(request.form['lng'])
-        if not (-90 <= lat <= 90 and -180 <= lng <= 180):
-            return jsonify({'error': 'Invalid coordinates'}), 400
-    except Exception:
-        return jsonify({'error': 'Invalid coordinates format'}), 400
-
-    if 'image' not in request.files or request.files['image'].filename == '':
-        return jsonify({'error': 'Main image is required'}), 400
-
-    main_image = request.files['image']
-    if not allowed_file(main_image.filename):
-        return jsonify({'error': 'Invalid file format. Allowed: PNG, JPG, JPEG, GIF, WEBP'}), 400
-
-    # 2) 读取字段 ---------------------------------------------------------------
-    title = request.form['title'].strip()
-    description = request.form['description'].strip()
-    author = request.form['author'].strip()
-    pin_code = request.form['pin_code'].strip()
-    project_type = request.form.get('project_type', 'Other').strip() or 'Other'
-    year = request.form.get('year', '').strip()
-    # 修正：full_credit 应该从 full_credit 字段取，默认回退 author
-    full_credit = request.form.get('full_credit', author).strip()
-    # 新增：thumbnail_description 用于描述缩略图
-    thumbnail_description = request.form.get('thumbnail_description', '').strip()
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-
-    safe_title = sanitize_filename(title)
-
-    # 3) 先把图片都处理好（此阶段不打开数据库，避免锁） -------------------------
+    # 初始化变量，确保在所有情况下都定义
     processed_main_path = None
     processed_gallery_paths = []
-
-    # 3.1 主图
+    
     try:
-        ext = main_image.filename.rsplit('.', 1)[1].lower()
-        count = 1
-        while True:
-            filename = f"{safe_title}_{count}.{ext}"
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
-            if not os.path.exists(filepath):
-                break
-            count += 1
-
-        main_image.seek(0)
-        img = Image.open(main_image)
+        # 确保上传目录存在
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         
-        # 检查是否为 GIF 动画
-        is_gif = ext == 'gif' and hasattr(img, 'is_animated') and img.is_animated
+        # 调试：打印所有接收到的表单数据
+        print("=" * 50)
+        print("UPLOAD REQUEST RECEIVED")
+        print("=" * 50)
+        print(f"Form data keys: {list(request.form.keys())}")
+        print(f"Files keys: {list(request.files.keys())}")
+        for key in request.form.keys():
+            print(f"  {key}: {request.form.get(key, '')[:100]}")  # 只打印前100个字符
+        print("=" * 50)
         
-        # 仅对非 GIF 动画图片做颜色转换
-        if not is_gif and img.mode in ('RGBA', 'LA', 'P'):
-            img = img.convert('RGB')
+        # 1) 表单校验 ---------------------------------------------------------------
+        required = ['title', 'description', 'author', 'lat', 'lng', 'pin_code']
+        for f in required:
+            value = request.form.get(f, '').strip()
+            if not value:
+                print(f"Validation error: {f} is required (received: '{request.form.get(f, '')}')")
+                return jsonify({'error': f'{f} is required'}), 400
+            print(f"✓ {f}: {value[:50]}")  # 只打印前50个字符
 
-        w, h = img.size
-        if w < MIN_WIDTH or h < MIN_HEIGHT:
-            img = img.resize((MIN_WIDTH, MIN_HEIGHT), Image.Resampling.LANCZOS)
+        if not validate_pin_code(request.form.get('pin_code')):
+            print("Validation error: PIN code must be exactly 4 digits")
+            return jsonify({'error': 'PIN code must be exactly 4 digits'}), 400
 
-        # 如果是 GIF 动画，直接保存
-        if is_gif:
-            main_image.seek(0)
-            with open(filepath, 'wb') as f:
-                f.write(main_image.read())
-        else:
-            # 如果源文件>4MB，先缩一轮长边 1200
-            main_image.seek(0, os.SEEK_END)
-            if main_image.tell() > MAX_SIZE_MB * 1024 * 1024:
-                img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+        try:
+            lat = float(request.form['lat'])
+            lng = float(request.form['lng'])
+            if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+                return jsonify({'error': 'Invalid coordinates'}), 400
+        except Exception:
+            return jsonify({'error': 'Invalid coordinates format'}), 400
 
-            quality = 90
+        if 'image' not in request.files:
+            print("Error: 'image' key not found in request.files")
+            print(f"Available files keys: {list(request.files.keys())}")
+            return jsonify({'error': 'Main image is required'}), 400
+        
+        main_image = request.files['image']
+        if not main_image or main_image.filename == '':
+            print("Error: Main image is missing or empty")
+            print(f"Main image object: {main_image}")
+            return jsonify({'error': 'Main image is required'}), 400
+
+        if not allowed_file(main_image.filename):
+            print(f"Error: Invalid file format for main image: {main_image.filename}")
+            return jsonify({'error': 'Invalid file format. Allowed: PNG, JPG, JPEG, GIF, WEBP'}), 400
+        
+        print(f"✓ Main image: {main_image.filename} ({main_image.content_length} bytes)")
+
+        # 2) 读取字段 ---------------------------------------------------------------
+        title = request.form['title'].strip()
+        description = request.form['description'].strip()
+        author = request.form['author'].strip()
+        
+        print(f"Processing upload: title={title}, author={author}, main_image={main_image.filename}")
+        pin_code = request.form['pin_code'].strip()
+        project_type = request.form.get('project_type', 'Other').strip() or 'Other'
+        year = request.form.get('year', '').strip()
+        # 修正：full_credit 应该从 full_credit 字段取，默认回退 author
+        full_credit = request.form.get('full_credit', author).strip()
+        # 新增：thumbnail_description 用于描述缩略图
+        thumbnail_description = request.form.get('thumbnail_description', '').strip()
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        safe_title = sanitize_filename(title)
+
+        # 3) 先把图片都处理好（此阶段不打开数据库，避免锁） -------------------------
+
+        # 3.1 主图
+        try:
+            print(f"Processing main image: {main_image.filename}")
+            ext = main_image.filename.rsplit('.', 1)[1].lower()
+            count = 1
             while True:
-                img.save(filepath, optimize=True, quality=quality)
-                if os.path.getsize(filepath) <= MAX_SIZE_MB * 1024 * 1024 or quality <= 30:
+                filename = f"{safe_title}_{count}.{ext}"
+                filepath = os.path.join(UPLOAD_FOLDER, filename)
+                if not os.path.exists(filepath):
                     break
-                quality -= 5
+                count += 1
 
-        processed_main_path = filepath.replace('\\', '/')
-    except Exception as e:
-        # 主图失败就直接返回
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        return jsonify({'error': f'Error processing main image: {e}'}), 500
-
-    # 3.2 画廊
-    try:
-        gallery_files = request.files.getlist('details') if 'details' in request.files else []
-        # 新增：逐图的名称数组（与 files 对齐）
-        gallery_descs = request.form.getlist('image_descriptions[]') or []
-        for i, detail in enumerate(gallery_files):
-            if not (detail and detail.filename and allowed_file(detail.filename)):
-                continue
-
-            ext = detail.filename.rsplit('.', 1)[1].lower()
-            detail_filename = f"{safe_title}_detail_{i+1}.{ext}"
-            detail_path = os.path.join(UPLOAD_FOLDER, detail_filename)
-
-            detail.seek(0)
-            di = Image.open(detail)
+            main_image.seek(0)
+            img = Image.open(main_image)
             
             # 检查是否为 GIF 动画
-            is_gif = ext == 'gif' and hasattr(di, 'is_animated') and di.is_animated
+            is_gif = ext == 'gif' and hasattr(img, 'is_animated') and img.is_animated
             
             # 仅对非 GIF 动画图片做颜色转换
-            if not is_gif and di.mode in ('RGBA', 'LA', 'P'):
-                di = di.convert('RGB')
+            if not is_gif and img.mode in ('RGBA', 'LA', 'P'):
+                img = img.convert('RGB')
+
+            w, h = img.size
+            if w < MIN_WIDTH or h < MIN_HEIGHT:
+                img = img.resize((MIN_WIDTH, MIN_HEIGHT), Image.Resampling.LANCZOS)
 
             # 如果是 GIF 动画，直接保存
             if is_gif:
-                detail.seek(0)
-                with open(detail_path, 'wb') as f:
-                    f.write(detail.read())
+                main_image.seek(0)
+                with open(filepath, 'wb') as f:
+                    f.write(main_image.read())
+                processed_main_path = filepath.replace('\\', '/')
             else:
-                dw, dh = di.size
-                if dw < MIN_WIDTH or dh < MIN_HEIGHT:
-                    di = di.resize((MIN_WIDTH, MIN_HEIGHT), Image.Resampling.LANCZOS)
+                # 如果源文件>4MB，先缩一轮长边 1200
+                main_image.seek(0, os.SEEK_END)
+                if main_image.tell() > MAX_SIZE_MB * 1024 * 1024:
+                    img.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
 
-                detail.seek(0, os.SEEK_END)
-                if detail.tell() > MAX_SIZE_MB * 1024 * 1024:
-                    di.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
-
-                q = 90
+                quality = 90
                 while True:
-                    di.save(detail_path, optimize=True, quality=q)
-                    if os.path.getsize(detail_path) <= MAX_SIZE_MB * 1024 * 1024 or q <= 30:
+                    img.save(filepath, optimize=True, quality=quality)
+                    if os.path.getsize(filepath) <= MAX_SIZE_MB * 1024 * 1024 or quality <= 30:
                         break
-                    q -= 5
+                    quality -= 5
 
-            # 取该图对应的名称（越界则给空串）
-            per_image_desc = gallery_descs[i] if i < len(gallery_descs) else ''
-            processed_gallery_paths.append((detail_path.replace('\\', '/'), per_image_desc))
+                processed_main_path = filepath.replace('\\', '/')
+        except Exception as e:
+            # 主图失败就直接返回
+            print(f"Error processing main image: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if 'filepath' in locals() and os.path.exists(filepath):
+                os.remove(filepath)
+            return jsonify({'error': f'Error processing main image: {str(e)}'}), 500
+
+        # 3.2 画廊
+        try:
+            gallery_files = request.files.getlist('details') if 'details' in request.files else []
+            print(f"Processing gallery: {len(gallery_files)} files received")
+            # 新增：逐图的名称数组（与 files 对齐）
+            gallery_descs = request.form.getlist('image_descriptions[]') or []
+            for i, detail in enumerate(gallery_files):
+                if not (detail and detail.filename and allowed_file(detail.filename)):
+                    continue
+
+                ext = detail.filename.rsplit('.', 1)[1].lower()
+                detail_filename = f"{safe_title}_detail_{i+1}.{ext}"
+                detail_path = os.path.join(UPLOAD_FOLDER, detail_filename)
+
+                detail.seek(0)
+                di = Image.open(detail)
+                
+                # 检查是否为 GIF 动画
+                is_gif = ext == 'gif' and hasattr(di, 'is_animated') and di.is_animated
+                
+                # 仅对非 GIF 动画图片做颜色转换
+                if not is_gif and di.mode in ('RGBA', 'LA', 'P'):
+                    di = di.convert('RGB')
+
+                # 如果是 GIF 动画，直接保存
+                if is_gif:
+                    detail.seek(0)
+                    with open(detail_path, 'wb') as f:
+                        f.write(detail.read())
+                else:
+                    dw, dh = di.size
+                    if dw < MIN_WIDTH or dh < MIN_HEIGHT:
+                        di = di.resize((MIN_WIDTH, MIN_HEIGHT), Image.Resampling.LANCZOS)
+
+                    detail.seek(0, os.SEEK_END)
+                    if detail.tell() > MAX_SIZE_MB * 1024 * 1024:
+                        di.thumbnail((1200, 1200), Image.Resampling.LANCZOS)
+
+                    q = 90
+                    while True:
+                        di.save(detail_path, optimize=True, quality=q)
+                        if os.path.getsize(detail_path) <= MAX_SIZE_MB * 1024 * 1024 or q <= 30:
+                            break
+                        q -= 5
+
+                # 取该图对应的名称（越界则给空串）
+                per_image_desc = gallery_descs[i] if i < len(gallery_descs) else ''
+                processed_gallery_paths.append((detail_path.replace('\\', '/'), per_image_desc))
+        except Exception as e:
+            # 清理主图，再报错
+            print(f"Error processing gallery: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            if processed_main_path and os.path.exists(processed_main_path):
+                os.remove(processed_main_path)
+            for p, _ in processed_gallery_paths:
+                if os.path.exists(p):
+                    os.remove(p)
+            return jsonify({'error': f'Error processing gallery: {str(e)}'}), 500
+
+        # 4) 再打开数据库，快速写入 ---------------------------------------------------
+        try:
+            print(f"\n{'='*50}")
+            print("DATABASE OPERATION")
+            print(f"{'='*50}")
+            print(f"Connecting to database...")
+            conn = db_connect()
+            c = conn.cursor()
+            print(f"Database connected. Inserting pin data...")
+            print(f"Data: title={title}, processed_main_path={processed_main_path}, gallery_count={len(processed_gallery_paths)}")
+            print(f"Values: lat={lat}, lng={lng}, pin_code={pin_code}, project_type={project_type}")
+
+            c.execute("""
+                INSERT INTO pins (title, description, author, lat, lng, image_path, timestamp, pin_code, project_type, year, full_credit, image_description)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (title, description, author, lat, lng, processed_main_path, timestamp, pin_code, project_type, year, full_credit, thumbnail_description))
+            pin_id = c.lastrowid
+            print(f"✓ Pin inserted with ID: {pin_id}")
+
+            for i, (p, per_desc) in enumerate(processed_gallery_paths):
+                print(f"Inserting gallery image {i+1}: {p}")
+                c.execute("INSERT INTO pin_images (pin_id, image_path, image_description, order_index) VALUES (?, ?, ?, ?)", (pin_id, p, per_desc, i))
+
+            print("Committing transaction...")
+            conn.commit()
+            conn.close()
+            print(f"✓ Successfully created pin with ID: {pin_id}")
+            print(f"{'='*50}\n")
+            return jsonify({'success': True, 'message': 'Pin created successfully!', 'pin_id': pin_id})
+        except Exception as e:
+            # DB 出错时，清理已经落盘的图片
+            print(f"\n{'='*50}")
+            print(f"DATABASE ERROR: {str(e)}")
+            print(f"{'='*50}")
+            import traceback
+            traceback.print_exc()
+            print(f"{'='*50}\n")
+            if processed_main_path and os.path.exists(processed_main_path):
+                os.remove(processed_main_path)
+            for p, _ in processed_gallery_paths:
+                if os.path.exists(p):
+                    os.remove(p)
+            return jsonify({'error': f'Database error: {str(e)}'}), 500
     except Exception as e:
-        # 清理主图，再报错
+        # 捕获所有未预期的错误
+        print(f"\n{'='*50}")
+        print(f"UNEXPECTED ERROR IN UPLOAD: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        print(f"{'='*50}")
+        import traceback
+        traceback.print_exc()
+        print(f"{'='*50}\n")
+        # 清理已处理的文件
         if processed_main_path and os.path.exists(processed_main_path):
-            os.remove(processed_main_path)
+            try:
+                os.remove(processed_main_path)
+            except:
+                pass
         for p, _ in processed_gallery_paths:
             if os.path.exists(p):
-                os.remove(p)
-        return jsonify({'error': f'Error processing gallery: {e}'}), 500
-
-    # 4) 再打开数据库，快速写入 ---------------------------------------------------
-    try:
-        conn = db_connect()
-        c = conn.cursor()
-
-        c.execute("""
-            INSERT INTO pins (title, description, author, lat, lng, image_path, timestamp, pin_code, project_type, year, full_credit, image_description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (title, description, author, lat, lng, processed_main_path, timestamp, pin_code, project_type, year, full_credit, thumbnail_description))
-        pin_id = c.lastrowid
-
-        for i, (p, per_desc) in enumerate(processed_gallery_paths):
-            c.execute("INSERT INTO pin_images (pin_id, image_path, image_description, order_index) VALUES (?, ?, ?, ?)", (pin_id, p, per_desc, i))
-
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'message': 'Pin created successfully!', 'pin_id': pin_id})
-    except Exception as e:
-        # DB 出错时，清理已经落盘的图片
-        if processed_main_path and os.path.exists(processed_main_path):
-            os.remove(processed_main_path)
-        for p, _ in processed_gallery_paths:
-            if os.path.exists(p):
-                os.remove(p)
-        return jsonify({'error': f'Database error: {e}'}), 500
+                try:
+                    os.remove(p)
+                except:
+                    pass
+        return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 
 
