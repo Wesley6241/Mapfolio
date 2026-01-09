@@ -3110,9 +3110,11 @@ body {
     justify-content: center;    /* 水平居中 */
     height: 100dvh;             /* 移动端更稳，用动态视口单位 */
     min-height: 100svh;        /* 确保占满视口高度 */
+    padding: 0;
+    box-sizing: border-box;
 }
 
-/* 椭圆容器：严格按照Figma设计 - 1007x468px */
+/* 椭圆容器：严格按照Figma设计 - 1380x580px */
 /* 替换 map-oval 的圆角做法为椭圆裁剪 */
 .map-oval {
     position: relative;
@@ -3126,6 +3128,7 @@ body {
     background: #EBEBEB;
     z-index: 1;
     flex-shrink: 0;  /* 防止被压缩 */
+    transition: width 0.3s ease, height 0.3s ease; /* 平滑过渡 */
   }
   
   /* 雾层跟随父级裁剪，不必改；如果想更薄一点可以调透明度 */
@@ -3183,54 +3186,82 @@ body {
 .leaflet-pane.leaflet-popup-pane  { z-index: 500 !important; }  /* ✅ Popup 最高 */
 
 /* 响应式设计：确保椭圆在不同屏幕尺寸下正确显示并保持居中 */
+/* 基础比例：1380px (width) : 580px (height) = 2.379:1 */
 @media (max-width: 1600px) {
     .map-oval {
-        width: min(1480px, 90vw);
-        height: calc(640px * min(1480px, 90vw) / 1480px);
+        width: min(1380px, 92vw);
+        height: calc(580px * min(1380px, 92vw) / 1380px);
+        max-height: 85vh; /* 确保不会超出视口 */
     }
 }
 
 @media (max-width: 1440px) {
     .map-oval {
-        width: min(1200px, 85vw);
-        height: calc(640px * min(1200px, 85vw) / 1480px);
+        width: min(1200px, 88vw);
+        height: calc(580px * min(1200px, 88vw) / 1380px);
+        max-height: 80vh;
     }
 }
 
 @media (max-width: 1024px) {
     .map-oval {
-        width: min(900px, 80vw);
-        height: calc(640px * min(900px, 80vw) / 1480px);
+        width: min(900px, 85vw);
+        height: calc(580px * min(900px, 85vw) / 1380px);
+        max-height: 75vh;
+    }
+    
+    .map-stage {
+        padding: 20px;
+    }
+    
+    .map-navigation .nav-button {
+        transform: scale(0.85);
+    }
+    
+    .map-navigation .nav-button--top-left,
+    .map-navigation .nav-button--top-right,
+    .map-navigation .nav-button--bottom-right,
+    .map-navigation .nav-button--bottom-left {
+        width: auto;
+        min-width: 140px;
     }
 }
 
 @media (max-width: 768px) {
     .map-oval {
-        width: min(600px, 75vw);
-        height: calc(580px * min(600px, 75vw) / 1380px);
+        width: min(95vw, 700px);
+        height: calc(580px * min(95vw, 700px) / 1380px);
+        max-height: 70vh;
+        min-height: 300px; /* 确保最小高度 */
     }
     
+    .map-stage {
+        padding: 16px;
+        align-items: flex-start;
+        padding-top: 80px; /* 为导航按钮留出空间 */
+    }
+
     .map-navigation .nav-button {
         transform: scale(0.75);
     }
-    
+
     .map-navigation .nav-button__text {
         font-size: 11px;
     }
-    
+
     .pin-popup {
         padding: 12px 16px;
         min-width: 160px;
     }
-    
+
     .pin-popup__title {
         font-size: 14px;
     }
-    
+
     .pin-popup__category {
         font-size: 11px;
     }
-    
+
     .pin-popup__btn {
         font-size: 10px;
         padding: 4px 8px;
@@ -3240,8 +3271,15 @@ body {
 
 @media (max-width: 480px) {
     .map-oval {
-        width: min(400px, 90vw);
-        height: calc(580px * min(400px, 90vw) / 1380px);
+        width: min(95vw, 500px);
+        height: calc(580px * min(95vw, 500px) / 1380px);
+        max-height: 65vh;
+        min-height: 250px;
+    }
+    
+    .map-stage {
+        padding: 12px;
+        padding-top: 70px;
     }
     
     .map-navigation {
@@ -3253,7 +3291,7 @@ body {
     
     .map-navigation .nav-button {
         pointer-events: auto;
-        transform: scale(0.7);
+        transform: scale(0.65);
         padding: 6px 10px;
     }
     
@@ -3261,50 +3299,50 @@ body {
         top: 12px;
         left: 12px;
         width: auto;
-        min-width: 100px;
+        min-width: 90px;
     }
     
     .map-navigation .nav-button--top-right {
         top: 12px;
         right: 12px;
         width: auto;
-        min-width: 100px;
+        min-width: 90px;
     }
     
     .map-navigation .nav-button--bottom-right {
         bottom: 12px;
         right: 12px;
         width: auto;
-        min-width: 80px;
+        min-width: 70px;
     }
     
     .map-navigation .nav-button--bottom-left {
         bottom: 12px;
         left: 12px;
         width: auto;
-        min-width: 120px;
-        font-size: 9px;
+        min-width: 100px;
+        font-size: 8px;
     }
     
     .map-navigation .nav-button__text {
-        font-size: 10px;
+        font-size: 9px;
     }
     
     .map-navigation .nav-button__foot {
-        height: 6px;
+        height: 5px;
     }
     
     /* Context menu mobile optimization */
     .context-menu {
-        width: 100px;
-        height: 36px;
-        border-radius: 18px;
+        width: 90px;
+        height: 32px;
+        border-radius: 16px;
     }
     
     .context-menu__option {
-        width: 70px;
-        height: 28px;
-        font-size: 12px;
+        width: 65px;
+        height: 26px;
+        font-size: 11px;
     }
     
     /* Pin dialog mobile */
@@ -3354,6 +3392,25 @@ body {
     .exit-button {
         padding: 10px 16px;
         font-size: 14px;
+    }
+    
+    .pin-popup {
+        padding: 10px 14px;
+        min-width: 140px;
+    }
+    
+    .pin-popup__title {
+        font-size: 13px;
+    }
+    
+    .pin-popup__category {
+        font-size: 10px;
+    }
+    
+    .pin-popup__btn {
+        font-size: 9px;
+        padding: 3px 6px;
+        min-width: 40px;
     }
 }
 
