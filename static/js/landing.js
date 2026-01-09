@@ -180,7 +180,7 @@ document.addEventListener('touchstart', (e) => {
   }
 }, { passive: true });
 
-// 触摸移动 - 更敏感的缩放手势检测
+// 触摸移动 - 手机端优化：更敏感的缩放手势检测
 document.addEventListener('touchmove', (e) => {
   if (e.touches.length === 2 && touchStartDistance > 0) {
     e.preventDefault();
@@ -188,12 +188,16 @@ document.addEventListener('touchmove', (e) => {
     const scale = currentDistance / touchStartDistance;
     const timeElapsed = Date.now() - touchStartTime;
     
-    // 降低阈值，更敏感的手势检测
-    if (timeElapsed < 1500 && Math.abs(scale - 1) > 0.15) {
-      if (scale > 1.15) {
+    // 手机端：降低阈值，更敏感的手势检测
+    const isMobile = window.innerWidth <= 768;
+    const scaleThreshold = isMobile ? 0.1 : 0.15; // 手机端更敏感
+    const scaleTrigger = isMobile ? 1.1 : 1.15; // 手机端更容易触发
+    
+    if (timeElapsed < 1500 && Math.abs(scale - 1) > scaleThreshold) {
+      if (scale > scaleTrigger) {
         // 放大 - 前进到下一帧
         throttle(nextFrame);
-      } else if (scale < 0.85) {
+      } else if (scale < (2 - scaleTrigger)) {
         // 缩小 - 后退到上一帧
         throttle(prevFrame);
       }
