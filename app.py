@@ -13,6 +13,16 @@ from flask_cors import cross_origin  # For stability - it used to only work on s
 app = Flask(__name__)
 app.secret_key = 'mapfolio_secret_key_2024'  # Required for flash messages
 
+# Database path - use environment variable for deployment, fallback to local
+# On Render, set DATABASE_PATH environment variable to a persistent location
+# Example: DATABASE_PATH=/opt/render/project/src/data/archive.db
+DATABASE_PATH = os.environ.get('DATABASE_PATH', 'archive.db')
+
+# Ensure database directory exists if using custom path
+db_dir = os.path.dirname(DATABASE_PATH)
+if db_dir and not os.path.exists(db_dir):
+    os.makedirs(db_dir, exist_ok=True)
+
 # Define the folder to store uploaded images
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)  # Create the upload folder if it doesn't exist
@@ -26,7 +36,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
 # Initialize the database with a table called 'pins'
 def init_db():
-    conn = sqlite3.connect('archive.db', timeout=30)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=30)
     c = conn.cursor()
 
     # 更稳的 SQLite 设置（WAL 多读单写；适度同步；默认 30s 等待）
@@ -99,12 +109,12 @@ def init_db():
     conn.close()
 
 def db_connect():
-    conn = sqlite3.connect('archive.db', timeout=30)
+    conn = sqlite3.connect(DATABASE_PATH, timeout=30)
     # busy_timeout 需要每个连接都设；WAL 在库级别一次性生效即可
     conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
-    conn = sqlite3.connect('archive.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
 
     # Main table for pins
@@ -180,7 +190,7 @@ def db_connect():
     conn.commit()
     conn.close()
 
-    conn = sqlite3.connect('archive.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
 
     # Main table for pins
@@ -269,7 +279,7 @@ def map_page():
 # Route for the project list page
 @app.route('/list')
 def project_list():
-    conn = sqlite3.connect('archive.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM pins ORDER BY RANDOM()")  # Get all pins, newest first
     pins = c.fetchall()
@@ -300,7 +310,7 @@ def feedback():
             return render_template('feedback.html')
         
         # Save feedback to database
-        conn = sqlite3.connect('archive.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         
@@ -328,7 +338,7 @@ def verify_pin(pin_id):
             return jsonify({'success': False, 'message': 'Invalid PIN format'})
         
         # Check if PIN matches
-        conn = sqlite3.connect('archive.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
         c.execute("SELECT pin_code FROM pins WHERE id = ?", (pin_id,))
         result = c.fetchone()
@@ -632,7 +642,7 @@ def delete_pin(id):
         if not input_pin:
             return jsonify(success=False, error="PIN code is required"), 400
 
-        conn = sqlite3.connect('archive.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
 
         # Verify pin exists and PIN code matches
@@ -686,7 +696,7 @@ def modify_pin(id):
         if not pin_code:
             return "PIN code is required", 400
 
-        conn = sqlite3.connect('archive.db', timeout=30)
+        conn = sqlite3.connect(DATABASE_PATH, timeout=30)
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
 
@@ -906,7 +916,7 @@ def modify_pin(id):
 # Route to show a specific pin's detail by ID
 @app.route('/detail/<int:id>')
 def detail(id):
-    conn = sqlite3.connect('archive.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute("SELECT * FROM pins WHERE id=?", (id,))
     pin = c.fetchone()
@@ -924,7 +934,7 @@ def detail(id):
 @app.route('/api/pins')
 def api_pins():
     try:
-        conn = sqlite3.connect('archive.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
         c.execute("SELECT id, title, lat, lng, author, timestamp, project_type FROM pins ORDER BY timestamp DESC")
         rows = c.fetchall()
@@ -950,7 +960,7 @@ def api_pins():
 @app.route('/api/pin/<int:id>')
 def api_pin(id):
     try:
-        conn = sqlite3.connect('archive.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
         c.execute("SELECT * FROM pins WHERE id=?", (id,))
         r = c.fetchone()
@@ -984,7 +994,7 @@ def api_pin(id):
 @app.route('/api/feedback/stats')
 def feedback_stats():
     try:
-        conn = sqlite3.connect('archive.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
         
         # Get total feedback count
@@ -1020,7 +1030,7 @@ def feedback_stats():
 @app.route('/like/<int:id>', methods=['POST'])
 def like_pin(id):
     try:
-        conn = sqlite3.connect('archive.db')
+        conn = sqlite3.connect(DATABASE_PATH)
         c = conn.cursor()
         
         # Check if pin exists
